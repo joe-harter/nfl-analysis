@@ -1,3 +1,6 @@
+This repository is used simply to house various playgrounds and models of data from the NFLVerse Dataset https://github.com/nflverse/nflverse-data
+
+Thanks to that team and especially Tan Ho for making this available.
 
 ## Set Up
 

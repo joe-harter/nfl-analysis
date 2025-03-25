@@ -1,4 +1,5 @@
 import pandas as pd
+import functools
 import os
 from urllib.request import urlretrieve
 from common import ROOT_PATH
@@ -19,6 +20,8 @@ ROOT_NFL_VERSE_FILES = "https://github.com/nflverse/nflverse-data/releases/downl
 ROOT_NFL_VERSE_PLAYER_STATS_FILES = "player_stats/"
 
 ROOT_NFL_VERSE_PBP_PARTICIPATION_FILES = "pbp_participation/"
+
+ROOT_NFL_VERSE_PBP_FILES = "pbp/"
 
 ROOT_NFL_VERSE_PLAYERS_FILES = "players/"
 
@@ -59,8 +62,70 @@ def get_pbp_participation_stats(years):
     )
 
 
+def get_pbp_data(years):
+    return get_stats(years, ROOT_NFL_VERSE_PBP_FILES, "play_by_play_{0}.parquet")
+
+
 def get_players_info():
     """Returns the source of truth for player metadata"""
     file = "players.parquet"
     local_path = f"{ROOT_PATH}/nflverse_data/{ROOT_NFL_VERSE_PLAYERS_FILES}{file}"
     return get_or_retrieve_file(local_path, ROOT_NFL_VERSE_PLAYERS_FILES, file)
+
+
+def get_off_player_stats(years):
+    return get_stats(
+        years, ROOT_NFL_VERSE_PLAYER_STATS_FILES, "player_stats_{0}.parquet"
+    )
+
+
+@functools.cache
+def get_player_id_from_play_metadata(
+    player_tag: str, home_team: str, away_team: str, season: str
+):
+    """
+    WIP: THIS DOESN'T WORK YET
+    Returns the player id (gsis_id) from the players df based on pbp data like the description player tag (##-F.Last) the home team, away team and jersey number
+    """
+    try:
+        last_name = player_tag.split(".")[1]
+        first_initial = player_tag.split(".")[0].split("-")[1]
+        jersey_number = int(player_tag.split("-")[0])
+    except Exception as e:
+        print("Error parsing player tag: ", player_tag, e)
+        return None
+
+    players_df = get_players_info()
+    possible_players = players_df[
+        (players_df["last_name"] == last_name)
+        & (
+            (players_df["first_name"].str.startswith(first_initial))
+            | (players_df["display_name"].str.startswith(first_initial))
+            | (players_df["football_name"].str.startswith(first_initial))
+        )
+        & (players_df["entry_year"].notna())
+    ]
+    if possible_players.empty:
+        return None
+    elif possible_players.shape[0] == 1:
+        return possible_players.iloc[0]["gsis_id"]
+    possible_ids = possible_players["gsis_id"].unique()
+    # If more than one possible match then we need to do more filtering
+    off_df = get_off_player_stats([season])[["player_name", "recent_team", "player_id"]]
+    off_df["team"] = off_df["recent_team"]
+    def_df = get_def_player_stats([season])[["player_name", "team", "player_id"]]
+    off_def_df = pd.concat([off_df, def_df])
+    print(
+        off_def_df[off_def_df["player_name"].str.contains(last_name)]
+        .groupby("player_id")
+        .nth(0)
+    )
+    player = off_def_df[
+        (off_def_df["player_name"].str.contains(last_name))
+        & (off_def_df["team"].isin([home_team, away_team]))
+        & (off_def_df["player_name"].str.startswith(first_initial))
+    ]["player_id"].unique()
+    if len(player) == 1:
+        return player[0]
+    print("Can't Resolve: ", player_tag, home_team, away_team, season)
+    return None
