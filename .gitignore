@@ -1,6 +1,7 @@
 __pycache__/
-playground.ipynb
+playground/
+kaggle_data/
 .vscode/
 .pytest_cache/
-kaggle_data/
+playground.ipynb
 playground/

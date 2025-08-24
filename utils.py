@@ -25,6 +25,8 @@ ROOT_NFL_VERSE_PBP_FILES = "pbp/"
 
 ROOT_NFL_VERSE_PLAYERS_FILES = "players/"
 
+ROOT_NFL_VERSE_CONTRACT_FILES = "contracts/"
+
 
 def get_or_retrieve_file(local_path, nflverse_dir, file):
     if not os.path.isfile(local_path):
@@ -34,6 +36,15 @@ def get_or_retrieve_file(local_path, nflverse_dir, file):
             local_path,
         )
     return pd.read_parquet(local_path)
+
+
+def get_contract_data():
+    """
+    Returns the source of truth for player contract data
+    """
+    file = "historical_contracts.parquet"
+    local_path = f"{ROOT_PATH}/nflverse_data/{ROOT_NFL_VERSE_CONTRACT_FILES}{file}"
+    return get_or_retrieve_file(local_path, ROOT_NFL_VERSE_CONTRACT_FILES, file)
 
 
 def get_stats(
