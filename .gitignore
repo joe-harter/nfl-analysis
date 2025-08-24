@@ -1,2 +1,6 @@
 __pycache__/
 playground.ipynb
+.vscode/
+.pytest_cache/
+kaggle_data/
+playground/
